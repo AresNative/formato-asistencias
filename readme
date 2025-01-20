@@ -1,6 +1,6 @@
 
 
-crear exe ``pyinstaller --onefile --noconsole programa.py``  // --nombre de archivo: check-bascula.py
+crear exe ``pyinstaller --onefile programa.py``  // --nombre de archivo: check-bascula.py
 
 
 ejecutar ``python3`` ``python`` 'nombre del archivo'
