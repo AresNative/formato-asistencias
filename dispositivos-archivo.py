@@ -1,54 +1,71 @@
+import tkinter as tk
+from tkinter import filedialog, scrolledtext, messagebox
 import re
-import datetime
-import os
 
-# Solicitar al usuario la ruta del archivo de entrada
-archivo_entrada = input("Ingresa la ruta del archivo de entrada: ")
+def process_file(file_path):
+    try:
+        # Leer el contenido del archivo
+        with open(file_path, "r", encoding="utf-8") as file:
+            data = file.read()
 
-# Verificar si el archivo de entrada existe
-if not os.path.isfile(archivo_entrada):
-    print(f"Error: El archivo {archivo_entrada} no existe.")
-    exit(1)
+        # Expresión regular para capturar los datos relevantes
+        pattern = r"^\s*(\d+)\s+.+?\s+\d{2}/\d{2}/\d{4}\s+(\d{2}):(\d{2}).*\s+(Entrada|Salida)"
+        matches = re.findall(pattern, data, re.MULTILINE)
 
-# Leer el contenido del archivo de entrada
-try:
-    with open(archivo_entrada, 'r', encoding='utf-8') as f:
-        data = f.read()
-except Exception as e:
-    print(f"Error al leer el archivo: {e}")
-    exit(1)
+        # Formatear los resultados
+        result = []
+        for match in matches:
+            cuenta, hora, minuto, tipo = match
+            result.append(f"{cuenta.zfill(5)}\t{tipo}\t{hora}:{minuto}")
 
-# Expresión regular para extraer los datos
-pattern = r"(\d+)\s+.*\s+(\d{2}/\d{2}/\d{4}) (\d{2}):(\d{2}):\d{2} (a\. m\.|p\. m\.)\s+(\w+)\s+.*"
+        return "\n".join(result)
 
-# Buscar las coincidencias
-matches = re.findall(pattern, data)
+    except Exception as e:
+        return f"Error al procesar el archivo: {e}"
 
-# Función para convertir hora en formato de 24 horas
-def convertir_hora(hora, minuto, periodo):
-    hora, minuto = int(hora), int(minuto)
-    if periodo == "a. m." and hora == 12:
-        hora = 0  # Convertir 12 a 00
-    elif periodo == "p. m." and hora != 12:
-        hora += 12  # Convertir la hora PM a formato de 24 horas
-    return f"{hora:02}:{minuto:02}"
+def open_file():
+    # Seleccionar archivo usando el cuadro de diálogo
+    file_path = filedialog.askopenfilename(
+        title="Selecciona un archivo",
+        filetypes=[("Archivos de texto", "*.txt"), ("Todos los archivos", "*.*")]
+    )
+    if not file_path:
+        return
 
-# Acumular los resultados
-result = []
-for match in matches:
-    cuenta, fecha, hora, minuto, periodo, tipo = match
-    hora_convertida = convertir_hora(hora, minuto, periodo)
-    result.append(f"{cuenta.zfill(5)}\t{tipo}\t{hora_convertida}")
+    # Procesar el archivo
+    processed_data = process_file(file_path)
 
-# Obtener la fecha y hora actual para nombrar el archivo de salida
-fecha_hora_actual = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-archivo_salida = f"resultados_{fecha_hora_actual}.txt"
+    # Mostrar el resultado en la vista previa
+    preview_text.delete("1.0", tk.END)
+    preview_text.insert(tk.END, processed_data)
 
-# Escribir los resultados en el archivo de salida
-try:
-    with open(archivo_salida, 'w', encoding='utf-8') as f:
-        f.write("\n".join(result))
-    print(f"Los resultados se han guardado en el archivo: {archivo_salida}")
-except Exception as e:
-    print(f"Error al escribir en el archivo de salida: {e}")
-    exit(1)
+    # Guardar el archivo procesado
+    save_path = filedialog.asksaveasfilename(
+        title="Guardar archivo",
+        defaultextension=".txt",
+        filetypes=[("Archivos de texto", "*.txt")]
+    )
+    if save_path:
+        with open(save_path, "w", encoding="utf-8") as output_file:
+            output_file.write(processed_data)
+        messagebox.showinfo("Guardado", f"Archivo guardado en: {save_path}")
+
+# Configurar la interfaz gráfica
+root = tk.Tk()
+root.title("Procesador de Archivos")
+root.geometry("600x400")
+
+# Etiqueta de instrucciones
+instructions = tk.Label(root, text="Arrastra un archivo de texto o haz clic en el botón para abrirlo.", wraplength=580, justify="center")
+instructions.pack(pady=10)
+
+# Botón para abrir archivo
+open_button = tk.Button(root, text="Abrir archivo", command=open_file)
+open_button.pack(pady=5)
+
+# Vista previa del contenido procesado
+preview_text = scrolledtext.ScrolledText(root, wrap=tk.WORD, height=15, width=70)
+preview_text.pack(pady=10)
+
+# Iniciar la aplicación
+root.mainloop()
